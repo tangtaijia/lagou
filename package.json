@@ -1,0 +1,14 @@
+{
+  "name": "lagou",
+  "version": "0.0.1",
+  "description": "Scrape lagou data.",
+  "main": "main.js",
+  "author": "taijia",
+  "dependencies": {
+    "request": "latest",
+    "system-sleep": "latest",
+    "cheerio": "latest",
+    "redis": "latest",
+    "async": "latest"
+  }
+}
