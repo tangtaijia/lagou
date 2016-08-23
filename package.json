@@ -9,6 +9,8 @@
     "system-sleep": "latest",
     "cheerio": "latest",
     "redis": "latest",
-    "async": "latest"
+    "async": "latest",
+    "mongodb": "latest",
+    "range":"latest"
   }
 }

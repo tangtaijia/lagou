@@ -4,6 +4,7 @@ var cheerio = require('cheerio');
 var http = require('http');
 var sleep = require('system-sleep');
 var util = require('util');
+var saver = require('./saver');
 
 var ualist = [
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.112 Safari/537.36",
@@ -26,45 +27,52 @@ var ualist = [
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24",
     "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24"
 ];
-exports.main = function (url, callback) {
+
+module.exports = function (key, callback) {
     var options = {
-        url: url,
+        url: util.format('http://www.lagou.com/gongsi/%s.html', key),
         headers: {
             'User-Agent': ualist[Math.floor(Math.random() * (ualist.length - 1)) + 1]
         },
         maxRedirects: 10
     };
+    util.log('fetch page: ' + options.url);
     request(options, function (error, response, html) {
         if (!error) {
             var $ = cheerio.load(html);
-            fetchCompany($);
-            if(callback)
-                callback.call();
-
+            fetchCompany($, key, function (result) {
+                if (callback)
+                    callback(result);
+            });
         } else {
-            console.info(error);
+            console.error(error);
+            if (callback)
+                callback(key + ' not found!!');
         }
     });
-    
-}; 
+
+};
 
 
-function fetchCompany($) {
+function fetchCompany($, key, callback) {
     var title_ele = $('.hovertips');
-    if(title_ele.attr('title')) {
+    if (title_ele.attr('title')) {
         var company = {};
         company.name = title_ele.attr('title');
         company.nick_name = title_ele.text().trim();
-        parseCompany($,function (company) {
-            storeCompany(company,function (result) {
-                if(result)
-                    util.log('store company:' + company.name+' successfully!!!');
+        parseCompany($, function (company) {
+            company.key = key;
+            storeCompany(company, function (result) {
+                if (result)
+                    callback(result + ' company: ' + company.name + ' key: ' + key + ' successfully!!!');
             });
         });
+    } else {
+        callback(key + ' not found!!');
     }
 }
 
-function parseCompany($,callback) {
+function parseCompany($, callback) {
     var title_ele = $('.hovertips');
     var company = {};
     company.name = title_ele.attr('title');
@@ -79,7 +87,7 @@ function parseCompany($,callback) {
     $('.company_data li strong').each(function (index, value) {
         company[company_data_map[index]] = $(value).text().trim();
     });
-    
+
     var products = [];
     $('#company_products .product_details').each(function (index, value) {
         var tags = [];
@@ -88,40 +96,50 @@ function parseCompany($,callback) {
         });
         var content_p = [];
         $(value).find('.product_profile p').each(function (i, n) {
-            if($(n).text().trim())
-                content_p.push($(n).text().trim()); 
+            if ($(n).text().trim())
+                content_p.push($(n).text().trim());
         });
         products.push({
-            "name":$(value).find('.product_url .url_valid').text().trim(),
-            "url":$(value).find('.product_url .url_valid').attr('href'),
-            "tags":tags,
-            "content": "<p>" + content_p.join("</p><p>") + "</p>"
+            "name": $(value).find('.product_url .url_valid').text().trim(),
+            "url": $(value).find('.product_url .url_valid').attr('href'),
+            "tags": tags,
+            "content": content_p.length ? ("<p>" + content_p.join("</p><p>") + "</p>") : ""
         });
     });
     company.products = products;
-    
+
     var desc_p = [];
     $('#company_intro .company_content p').each(function (index, value) {
-        if($(value).text().trim())
+        if ($(value).text().trim())
             desc_p.push($(value).text().trim());
     });
-    company.desc = "<p>" + desc_p.join("</p><p>") + "</p>";
-    
+    company.desc = desc_p.length ? ("<p>" + desc_p.join("</p><p>") + "</p>") : "";
+
     var history = [];
     $('.history_ul .history_li').each(function (index, value) {
         history.push({
-            "time":$(value).find('.date_year').text().trim() + " " + $(value).find('.date_day').text().trim(),
-            "tag":$(value).find('.li_type_icon').attr('title'),
-            "title":$(value).find('.desc_real_title').text().trim(),
-            "desc":$(value).find('.desc_intro').text().trim().replace(/[\n\s]/g,'')
+            "time": $(value).find('.date_year').text().trim() + " " + $(value).find('.date_day').text().trim(),
+            "tag": $(value).find('.li_type_icon').attr('title'),
+            "title": $(value).find('.desc_real_title').text().trim(),
+            "desc": $(value).find('.desc_intro').text().trim().replace(/[\n\s]/g, '')
         });
     });
     company.history = history;
+    
+    $('#basic_container ul li').each(function (index, value) {
+        company[$(value).find('i').attr('class')] = $(value).text().trim();
+    });
+    
+    var tags = [];
+    $('.tags_container ul li').each(function (index, value) {
+        tags.push($(value).text().trim());
+    });
+    company.tags = tags;
     return callback(company);
 }
 
-function storeCompany(company,callback) {
-    util.log('TO store company:');
-    console.info(JSON.stringify(company,null,2));
-    return callback(true);
+function storeCompany(company, callback) {
+    saver(company, 'company', function (type) {
+        return callback(type);
+    });
 }
