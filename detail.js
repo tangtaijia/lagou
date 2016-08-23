@@ -88,7 +88,8 @@ function parseCompany($,callback) {
         });
         var content_p = [];
         $(value).find('.product_profile p').each(function (i, n) {
-            content_p.push($(n).text()); 
+            if($(n).text().trim())
+                content_p.push($(n).text().trim()); 
         });
         products.push({
             "name":$(value).find('.product_url .url_valid').text().trim(),
@@ -101,9 +102,21 @@ function parseCompany($,callback) {
     
     var desc_p = [];
     $('#company_intro .company_content p').each(function (index, value) {
-        desc_p.push($(value).text().trim());
+        if($(value).text().trim())
+            desc_p.push($(value).text().trim());
     });
     company.desc = "<p>" + desc_p.join("</p><p>") + "</p>";
+    
+    var history = [];
+    $('.history_ul .history_li').each(function (index, value) {
+        history.push({
+            "time":$(value).find('.date_year').text().trim() + " " + $(value).find('.date_day').text().trim(),
+            "tag":$(value).find('.li_type_icon').attr('title'),
+            "title":$(value).find('.desc_real_title').text().trim(),
+            "desc":$(value).find('.desc_intro').text().trim().replace(/[\n\s]/g,'')
+        });
+    });
+    company.history = history;
     return callback(company);
 }
 
