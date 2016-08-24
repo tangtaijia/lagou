@@ -26,6 +26,7 @@ module.exports = function (data, type, callback) {
 
 var insertDocument = function (db, data, type, callback) {
     data.create_time = new Date();
+    data.update_time = new Date();
     db.collection(type).insertOne(data, function (err, result) {
         assert.equal(err, null);
         callback();

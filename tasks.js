@@ -35,7 +35,7 @@ var checkLastKey = function (db, callback) {
                 {"key": {$lte: key_range[1]}}
             ]
         }
-    ).sort({key: -1}).limit(1);
+    ).sort({update_time: -1}).limit(1);
     cursor.toArray(function (err, items) {
         assert.equal(null, err);
         if (items.length) {
