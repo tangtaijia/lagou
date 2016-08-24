@@ -11,6 +11,8 @@
     "redis": "latest",
     "async": "latest",
     "mongodb": "latest",
-    "range":"latest"
+    "range":"latest",
+    "yargs":"latest",
+    "mkdirp":"latest"
   }
 }

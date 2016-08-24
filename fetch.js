@@ -36,6 +36,7 @@ module.exports = function (key, callback) {
         },
         maxRedirects: 10
     };
+    process.setMaxListeners(0);
     util.log('fetch page: ' + options.url);
     request(options, function (error, response, html) {
         if (!error) {
