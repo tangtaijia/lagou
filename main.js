@@ -4,8 +4,10 @@ if (!key) {
     console.info('please input page index');
     return false;
 }
-fetch(key);
+fetch(key, true,function (result) {
+    console.log(result);
+});
 
 module.exports = function (key) {
-    fetch(key);
+    fetch(key, true);
 };

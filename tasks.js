@@ -12,6 +12,7 @@ var yargs = require('yargs').argv;
 var max_threads = yargs.t || 3;
 var sleep_secs = yargs.s || 1;
 var is_continue = yargs.c || false;
+var with_job = yargs.j || false;
 var key_range = getKeyRange(yargs.r);
 var taskId = crypto.createHash('md5').update(new Date().toISOString()).digest("hex");
 
@@ -49,15 +50,15 @@ function runTasks(start) {
     yargs.time = new Date();
     util.log('task: ' + taskId + ' is running');
     async.mapLimit(range(start, key_range[1]), max_threads, function (key, callback) {
-        fetch(key, function (result) {
-            callback(null, result);
+        fetch(key, with_job, function (result) {
             util.log(result);
-            if(sleep_secs) {
+            callback(null, result);
+            if (sleep_secs) {
                 // 2000 以内的随机数
                 var delay = parseInt((Math.random() * 10000000) % 2000, 10);
                 if (key % 100 == 0)
                     delay = 15;
-                sleep(delay * sleep_secs);    
+                sleep(delay * sleep_secs);
             }
         });
     }, function (err, result) {

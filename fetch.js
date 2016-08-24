@@ -5,6 +5,7 @@ var http = require('http');
 var sleep = require('system-sleep');
 var util = require('util');
 var saver = require('./saver');
+var jobs = require('./jobs');
 
 var ualist = [
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.112 Safari/537.36",
@@ -28,7 +29,7 @@ var ualist = [
     "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24"
 ];
 
-module.exports = function (key, callback) {
+module.exports = function (key, with_job, callback) {
     var options = {
         url: util.format('http://www.lagou.com/gongsi/%s.html', key),
         headers: {
@@ -41,7 +42,7 @@ module.exports = function (key, callback) {
     request(options, function (error, response, html) {
         if (!error) {
             var $ = cheerio.load(html);
-            fetchCompany($, key, function (result) {
+            fetchCompany($, key, with_job, function (result) {
                 if (callback)
                     callback(result);
             });
@@ -55,7 +56,7 @@ module.exports = function (key, callback) {
 };
 
 
-function fetchCompany($, key, callback) {
+function fetchCompany($, key, with_job, callback) {
     var title_ele = $('.hovertips');
     if (title_ele.attr('title')) {
         var company = {};
@@ -63,10 +64,22 @@ function fetchCompany($, key, callback) {
         company.nick_name = title_ele.text().trim();
         parseCompany($, function (company) {
             company.key = key;
-            storeCompany(company, function (result) {
-                if (result)
-                    callback(result + ' company: ' + company.name + ' key: ' + key + ' successfully!!!');
-            });
+            if (with_job && parseInt(company.online_job_num)) {
+                jobs(key, 1, function (jobs) {
+                    company.jobs = jobs;
+                    storeCompany(company, function (result) {
+                        if (result)
+                            callback(result + ' company: ' + company.name + ' key: ' + key + ' successfully!!!');
+                    });
+                });
+            } else {
+                storeCompany(company, function (result) {
+                    if (result)
+                        callback(result + ' company: ' + company.name + ' key: ' + key + ' successfully!!!');
+                });
+            }
+
+
         });
     } else {
         callback(key + ' not found!!');
@@ -126,11 +139,11 @@ function parseCompany($, callback) {
         });
     });
     company.history = history;
-    
+
     $('#basic_container ul li').each(function (index, value) {
         company[$(value).find('i').attr('class')] = $(value).text().trim();
     });
-    
+
     var tags = [];
     $('.tags_container ul li').each(function (index, value) {
         tags.push($(value).text().trim());
