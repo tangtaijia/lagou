@@ -1,10 +1,10 @@
+var fs = require('fs');
 var MongoClient = require('mongodb').MongoClient;
 var assert = require('assert');
-
-var url = 'mongodb://localhost:27017/lagou';
+var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 
 module.exports = function (data, type, callback) {
-    MongoClient.connect(url, function (err, db) {
+    MongoClient.connect(config.mongo_url, function (err, db) {
         checkDocument(db, data, type,
             function () {
                 insertDocument(db, data, type, function () {

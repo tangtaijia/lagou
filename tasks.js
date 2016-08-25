@@ -8,6 +8,7 @@ var assert = require('assert');
 var mkdirp = require('mkdirp');
 var crypto = require('crypto');
 var fetch = require('./fetch');
+var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 var yargs = require('yargs').argv;
 var max_threads = yargs.t || 3;
 var sleep_secs = yargs.s || 1;
@@ -17,8 +18,7 @@ var key_range = getKeyRange(yargs.r);
 var taskId = crypto.createHash('md5').update(new Date().toISOString()).digest("hex");
 
 if (is_continue) {
-    var url = 'mongodb://localhost:27017/lagou';
-    MongoClient.connect(url, function (err, db) {
+    MongoClient.connect(config.mongo_url, function (err, db) {
         assert.equal(null, err);
         checkLastKey(db, function (start) {
             runTasks(start);
