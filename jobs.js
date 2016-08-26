@@ -17,6 +17,7 @@ var self = module.exports = function (key, pageNo, callback) {
             },
             proxy:proxy_url,
             maxRedirects: 10,
+            timeout:8000,
             form: {
                 companyId: key,
                 pageNo: pageNo,
@@ -27,7 +28,7 @@ var self = module.exports = function (key, pageNo, callback) {
         process.setMaxListeners(0);
         request.post(options, function (error, response, html) {
             if (!error) {
-                if(html.indexOf('DOCTYPE') > -1) {
+                if(html.indexOf('DOCTYPE') > -1 || html.indexOf('<html><head>')) {
                     self(key, options.form.pageNo, callback);
                 } else {
                     var result = JSON.parse(html);
@@ -42,7 +43,7 @@ var self = module.exports = function (key, pageNo, callback) {
                         callback(jobs);
                 }
             } else {
-                console.error(error);
+                console.error('fetch job error: '+ error + ', proxy_url:' + proxy_url);
                 if (callback)
                     callback(jobs);
             }

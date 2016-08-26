@@ -51,7 +51,7 @@ var verify = exports.verify = function(records, index, callback) {
     request(options, function (error, response, html) {
         if (!error) {
             var $ = cheerio.load(html);
-            if($('title').html().indexOf('Nginx') > -1)
+            if($('title').html() && $('title').html().indexOf('Nginx') > -1)
                 callback(record);
             else
                 verify(records, ++index, callback);

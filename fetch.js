@@ -9,7 +9,7 @@ var jobs = require('./jobs');
 var proxy = require('./proxy');
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 
-module.exports = function (key, with_job, callback) {
+var self = module.exports = function (key, with_job, callback) {
     proxy(function (proxy_url) {
         var options = {
             url: util.format('http://www.lagou.com/gongsi/%s.html', key),
@@ -17,7 +17,8 @@ module.exports = function (key, with_job, callback) {
                 'User-Agent': config.ualist[Math.floor(Math.random() * (config.ualist.length - 1)) + 1]
             },
             proxy:proxy_url,
-            maxRedirects: 10
+            maxRedirects: 10,
+            timeout:8000
         };
         process.setMaxListeners(0);
         util.log('fetch page: ' + options.url + ', with proxy:' + proxy_url);
@@ -29,9 +30,9 @@ module.exports = function (key, with_job, callback) {
                         callback(result);
                 });
             } else {
-                console.error(error);
+                console.error('fetch company error:' + error + ', key:' + key);
                 if (callback)
-                    callback(key + ' not found!!');
+                    self(key, with_job, callback);
             }
         });
     });
