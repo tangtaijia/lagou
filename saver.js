@@ -2,25 +2,30 @@ var fs = require('fs');
 var MongoClient = require('mongodb').MongoClient;
 var assert = require('assert');
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
+var proxyips = require('./readfiledata')('proxyips.json');
 
-module.exports = function (data, type, callback) {
+var self = module.exports = function (data, type, callback) {
     MongoClient.connect(config.mongo_url, function (err, db) {
-        checkDocument(db, data, type,
-            function () {
-                insertDocument(db, data, type, function () {
-                    db.close();
-                    if(callback)
-                        callback('insert');
-                })
-            }
-            , function () {
-                updateDocument(db, data, type, function () {
-                    db.close();
-                    if(callback)
-                        callback('update');
-                })
-            }
-        );
+        if(!db) {
+            self(data, type, callback);
+        } else {
+            checkDocument(db, data, type,
+                function () {
+                    insertDocument(db, data, type, function () {
+                        db.close();
+                        if(callback)
+                            callback('insert');
+                    })
+                }
+                , function () {
+                    updateDocument(db, data, type, function () {
+                        db.close();
+                        if(callback)
+                            callback('update');
+                    })
+                }
+            );     
+        }
     });
 };
 

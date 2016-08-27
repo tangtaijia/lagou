@@ -6,18 +6,19 @@ var sleep = require('system-sleep');
 var util = require('util');
 var proxy = require('./proxy');
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
+var proxyips = require('./readfiledata')('proxyips.json');
 var pageSize = 10;
 var jobs = [];
 var self = module.exports = function (key, pageNo, callback) {
-    proxy(function (proxy_url) {
+    proxy(function (proxyip) {
+        proxy_url = proxyip ? ('http://' + proxyip.ip + ':' + proxyip.port) : 'localhost';
         var options = {
             url: 'http://www.lagou.com/gongsi/searchPosition.json',
             headers: {
                 'User-Agent': config.ualist[Math.floor(Math.random() * (config.ualist.length - 1)) + 1]
             },
-            proxy:proxy_url,
             maxRedirects: 10,
-            timeout:8000,
+            timeout: config.timeout,
             form: {
                 companyId: key,
                 pageNo: pageNo,
@@ -25,10 +26,16 @@ var self = module.exports = function (key, pageNo, callback) {
                 positionFirstType: "全部"
             }
         };
+        if(proxy_url != 'localhost')
+            options.proxy = proxy_url; 
         process.setMaxListeners(0);
         request.post(options, function (error, response, html) {
+            console.info('fetch joblist list', key, error);
+            console.info('response:' + JSON.stringify(response));
+            console.info(html.indexOf('DOCTYPE') > -1 || html.indexOf('<html><head>'));
+            console.info('html index');
             if (!error) {
-                if(html.indexOf('DOCTYPE') > -1 || html.indexOf('<html><head>')) {
+                if (response.statusCode == 302 || html.indexOf('DOCTYPE') > -1 || html.indexOf('<html><head>')) {
                     self(key, options.form.pageNo, callback);
                 } else {
                     var result = JSON.parse(html);
@@ -43,10 +50,10 @@ var self = module.exports = function (key, pageNo, callback) {
                         callback(jobs);
                 }
             } else {
-                console.error('fetch job error: '+ error + ', proxy_url:' + proxy_url);
+                console.error(new Date() + ' fetch job error: ' + error + ', proxy_url:' + proxy_url);
                 if (callback)
                     callback(jobs);
             }
-        });        
+        });
     });
 };

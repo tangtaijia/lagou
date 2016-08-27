@@ -8,19 +8,22 @@ var saver = require('./saver');
 var jobs = require('./jobs');
 var proxy = require('./proxy');
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
+var proxyips = require('./readfiledata')('proxyips.json');
 var try_count = 0;
 
 var self = module.exports = function (key, with_job, callback) {
-    proxy(function (proxy_url) {
+    proxy(function (proxyip) {
+        proxy_url = proxyip ? ('http://' + proxyip.ip + ':' + proxyip.port) : 'localhost';
         var options = {
             url: util.format('http://www.lagou.com/gongsi/%s.html', key),
             headers: {
                 'User-Agent': config.ualist[Math.floor(Math.random() * (config.ualist.length - 1)) + 1]
             },
-            proxy:proxy_url,
             maxRedirects: 10,
-            timeout:15000
+            timeout: config.timeout
         };
+        if(proxy_url != 'localhost')
+            options.proxy = proxy_url;
         process.setMaxListeners(0);
         util.log('fetch page: ' + options.url + ', with proxy:' + proxy_url);
         request(options, function (error, response, html) {
@@ -31,17 +34,18 @@ var self = module.exports = function (key, with_job, callback) {
                         callback(result);
                 });
             } else {
-		if(response && response.statusCode && response.statusCode == 400) {
-		   if(callback)
-		      callback(key + ' not found!!');
-		} else {
-                   console.error('fetch company error:' + error + ', key:' + key);
-		   ++try_count;
-		   if(try_count > 3) {
-		      callback(key + ' not found!!');
-		   } else if (callback)
-                       self(key, with_job, callback);
-		}
+                if (response && response.statusCode && response.statusCode == 400) {
+                    if (callback)
+                        callback(key + ' not found!!');
+                } else {
+                    ++try_count;
+                    if (try_count > 3) {
+                        console.error(new Date() + ' fetch company error:' + error + ', key:' + key);
+                        proxy.addProxyError(proxyip, error);
+                        callback(key + ' not found!!');
+                    } else if (callback)
+                        self(key, with_job, callback);
+                }
             }
         });
     });
@@ -56,6 +60,7 @@ function fetchCompany($, key, with_job, callback) {
         company.nick_name = title_ele.text().trim();
         parseCompany($, function (company) {
             company.key = key;
+            util.log(key, with_job, company.online_job_num);
             if (with_job && parseInt(company.online_job_num)) {
                 jobs(key, 1, function (jobs) {
                     company.jobs = jobs;
