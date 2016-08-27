@@ -8,6 +8,7 @@ var saver = require('./saver');
 var jobs = require('./jobs');
 var proxy = require('./proxy');
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
+var try_count = 0;
 
 var self = module.exports = function (key, with_job, callback) {
     proxy(function (proxy_url) {
@@ -18,7 +19,7 @@ var self = module.exports = function (key, with_job, callback) {
             },
             proxy:proxy_url,
             maxRedirects: 10,
-            timeout:8000
+            timeout:15000
         };
         process.setMaxListeners(0);
         util.log('fetch page: ' + options.url + ', with proxy:' + proxy_url);
@@ -30,9 +31,17 @@ var self = module.exports = function (key, with_job, callback) {
                         callback(result);
                 });
             } else {
-                console.error('fetch company error:' + error + ', key:' + key);
-                if (callback)
-                    self(key, with_job, callback);
+		if(response && response.statusCode && response.statusCode == 400) {
+		   if(callback)
+		      callback(key + ' not found!!');
+		} else {
+                   console.error('fetch company error:' + error + ', key:' + key);
+		   ++try_count;
+		   if(try_count > 3) {
+		      callback(key + ' not found!!');
+		   } else if (callback)
+                       self(key, with_job, callback);
+		}
             }
         });
     });
