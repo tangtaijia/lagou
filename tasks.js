@@ -7,7 +7,9 @@ var MongoClient = require('mongodb').MongoClient;
 var assert = require('assert');
 var mkdirp = require('mkdirp');
 var crypto = require('crypto');
+var exec = require('child_process').exec;
 var fetch = require('./fetch');
+var cluster = require('cluster');
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 var yargs = require('yargs').argv;
 var max_threads = yargs.t || 3;
@@ -17,15 +19,43 @@ var with_job = yargs.j || false;
 var key_range = getKeyRange(yargs.r);
 var taskId = crypto.createHash('md5').update(new Date().toISOString()).digest("hex");
 
-if (is_continue) {
-    MongoClient.connect(config.mongo_url, function (err, db) {
-        assert.equal(null, err);
-        checkLastKey(db, function (start) {
-            runTasks(start);
+if (cluster.isMaster) {
+    var runfork = false;
+    while (1) {
+        var proxyips = require('./readfiledata')('proxyips.json');
+        if (proxyips && proxyips.ips)
+            break;
+        else {
+            if(!runfork) {
+                runfork = true;
+                cluster.fork();
+            }
+            util.log('no proxy ips, please wait!!!');
+            sleep(1000);
+        }
+    }
+    if(!runfork) {
+        runfork = true;
+        cluster.fork();
+    }
+
+    if (is_continue) {
+        MongoClient.connect(config.mongo_url, function (err, db) {
+            assert.equal(null, err);
+            checkLastKey(db, function (start) {
+                runTasks(start);
+            });
         });
+    } else
+        runTasks(key_range[0]);
+
+    cluster.on('exit', (worker, code, signal) => {
+        console.log(`worker ${worker.process.pid} died`);
     });
-} else
-    runTasks(key_range[0]);
+
+} else {
+    require('./proxyfetcher')();
+}
 
 var checkLastKey = function (db, callback) {
     var cursor = db.collection('company').find(
@@ -70,7 +100,19 @@ function runTasks(start) {
                     return console.error(err);
                 }
                 util.log("task: " + taskId + " results file was saved! all done!!!");
-                process.exit(0);
+                exec('sudo pkill -f lagou/tasks.js', (error, stdout, stderr) => {
+                    if (error) {
+                        console.error(`exec error: ${error}`);
+                        return;
+                    }
+                    if (stderr && stderr.indexOf('proxychains') == -1) {
+                        console.error(`exec stderror: ${stderr}`);
+                        return;
+                    }
+
+                    console.info('kill all node process!!!');
+                    process.exit(0);
+                });
             });
         });
     });

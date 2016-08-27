@@ -9,6 +9,7 @@ var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 var proxyips = require('./readfiledata')('proxyips.json');
 var pageSize = 10;
 var jobs = [];
+var try_count = 0;
 var self = module.exports = function (key, pageNo, callback) {
     proxy(function (proxyip) {
         proxy_url = proxyip ? ('http://' + proxyip.ip + ':' + proxyip.port) : 'localhost';
@@ -26,27 +27,30 @@ var self = module.exports = function (key, pageNo, callback) {
                 positionFirstType: "全部"
             }
         };
-        if(proxy_url != 'localhost')
-            options.proxy = proxy_url; 
+        if (proxy_url != 'localhost' && 0)
+            options.proxy = proxy_url;
         process.setMaxListeners(0);
         request.post(options, function (error, response, html) {
-            console.info('fetch joblist list', key, error);
-            console.info('response:' + JSON.stringify(response));
-            console.info(html.indexOf('DOCTYPE') > -1 || html.indexOf('<html><head>'));
-            console.info('html index');
             if (!error) {
-                if (response.statusCode == 302 || html.indexOf('DOCTYPE') > -1 || html.indexOf('<html><head>')) {
-                    self(key, options.form.pageNo, callback);
+                if (response.statusCode == 302 || html.indexOf('DOCTYPE') > -1 || html.indexOf('<html><head>') > -1) {
+                    ++try_count;
+                    if (try_count > 3) {
+                        console.error(new Date() + ' fetch job error, status code: ' + response.statusCode + ', proxy_url:' + proxy_url);
+                        callback(jobs);
+                    } else {
+                        self(key, options.form.pageNo, callback);
+                        sleep(8000);
+                    }
                 } else {
                     var result = JSON.parse(html);
                     pageCount = parseInt(result.content.data.page.totalCount / pageSize) + (result.content.data.page.totalCount % pageSize ? 1 : 0);
                     util.log('fetch joblist json with proxy: ' + proxy_url + ', page:' + options.form.pageNo + '/' + pageCount + ', key:' + key);
                     jobs = jobs.concat(result.content.data.page.result);
+                    ++options.form.pageNo;
                     if (options.form.pageNo < pageCount) {
-                        sleep(5000);
-                        self(key, ++options.form.pageNo, callback);
-                    }
-                    else
+                        self(key, options.form.pageNo, callback);
+                        sleep(8000);
+                    } else
                         callback(jobs);
                 }
             } else {

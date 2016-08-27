@@ -10,65 +10,18 @@ var verify_count = 0;
 
 exports = module.exports = function (callback) {
     if (proxyips.ips) {
-        if (valid_ips(proxyips).length > 10) {
-            var random_index = Math.floor(Math.random() * (proxyips.ips.length - 1)) + 1;
-            verify(proxyips.ips, random_index, verify_count, function (proxyip) {
-                callback(proxyip);
-            });
-        } else {
-            proxyips.ips = removeErrorIps();
-            util.log('proxy ip nums:' + valid_ips(proxyips).length + '/' + proxyips.ips.length);
-            addNewIps(callback);
-        }
+        var random_index = Math.floor(Math.random() * (proxyips.ips.length - 1)) + 1;
+        verify(proxyips.ips, random_index, verify_count, function (proxyip) {
+            callback(proxyip);
+        });
     } else {
-        addNewIps(callback);
+        callback(false);
     }
 };
 
-var valid_ips = function (proxyips) {
+var valid_ips = exports.valid_ips = function (proxyips) {
     return proxyips.ips.filter(function (value) {
         return !value.errors;
-    });
-};
-
-var addNewIps = exports.addNewIps = function (callback) {
-    var remain_ips = require('./readfiledata')('proxyips.json');
-    var remainIps = remain_ips ? remain_ips.ips : [];
-    var options = {
-        url: 'http://cn-proxy.com/',
-        headers: {
-            'User-Agent': config.ualist[Math.floor(Math.random() * (config.ualist.length - 1)) + 1]
-        },
-        maxRedirects: 10,
-        timeout: config.timeout
-    };
-    process.setMaxListeners(0);
-    request(options, function (error, response, html) {
-        if (!error) {
-            var $ = cheerio.load(html);
-            var proxyips_arr = [];
-            $('table tbody tr').each(function (index, element) {
-                var new_ip = {
-                    'ip': $(element).find('td').first().text(),
-                    'port': $(element).find('td').eq(1).text()
-                };
-                proxyips_arr.push(new_ip);
-                remainIps.forEach(function (remain_ip, r_index) {
-                    if(remain_ip.ip == new_ip.ip && remain_ip.port == new_ip.port)
-                        remainIps.splice(r_index, 1);
-                });
-            });
-            util.log(proxyips_arr.length + ' new ips');
-            remainIps = remainIps ? remainIps.concat(proxyips_arr) : proxyips_arr;
-            writeFile('proxyips.json', {"ips": remainIps});
-            var random_index = Math.floor(Math.random() * (remainIps.length - 1)) + 1;
-            verify(remainIps, random_index, 0, function (proxyip) {
-                callback(proxyip);
-            });
-        } else {
-            console.error(new Date() + ' fetch new proxy error: ' + error);
-            callback(false);
-        }
     });
 };
 
@@ -131,23 +84,6 @@ var addProxyError = exports.addProxyError = function (proxyip, error) {
     }
 };
 
-var removeErrorIps = exports.removeErrorIps = function () {
-    var change = false;
-    var remainIps = [];
-
-    require('./readfiledata')('proxyips.json').ips.forEach(function (item, index) {
-        if (item.errors)
-            change = true;
-        else
-            remainIps.push(item);
-    });
-
-    if (change) {
-        writeFile('proxyips.json', {"ips": remainIps});
-    }
-    return remainIps;
-};
-
-var writeFile = function (file, data) {
+var writeFile = exports.writeFile = function (file, data) {
     fs.writeFileSync(file, JSON.stringify(data, null, 2));
 };
