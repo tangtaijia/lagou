@@ -8,7 +8,6 @@ var assert = require('assert');
 var mkdirp = require('mkdirp');
 var crypto = require('crypto');
 var exec = require('child_process').exec;
-var Hub  = require('cluster-hub');
 var fetch = require('./fetch');
 var cluster = require('cluster');
 var proxyfetcher = require('./proxyfetcher');
@@ -20,47 +19,16 @@ var is_continue = yargs.c || false;
 var with_job = yargs.j || false;
 var key_range = getKeyRange(yargs.r);
 var taskId = crypto.createHash('md5').update(new Date().toISOString()).digest("hex");
-var hub = new Hub();
 
-if (cluster.isMaster) {
-    var runfork = false;
-    while (1) {
-        var proxyips = require('./readfiledata')('proxyips.json');
-        if (proxyips && proxyips.ips)
-            break;
-        else {
-            if(!runfork) {
-                runfork = true;
-                cluster.fork();
-            }
-            util.log('no proxy ips, please wait!!!');
-            sleep(1000);
-        }
-    }
-    if(!runfork) {
-        runfork = true;
-        cluster.fork();
-    }
-
-    if (is_continue) {
-        MongoClient.connect(config.mongo_url, function (err, db) {
-            assert.equal(null, err);
-            checkLastKey(db, function (start) {
-                runTasks(start);
-            });
+if (is_continue) {
+    MongoClient.connect(config.mongo_url, function (err, db) {
+        assert.equal(null, err);
+        checkLastKey(db, function (start) {
+            runTasks(start);
         });
-    } else
-        runTasks(key_range[0]);
-
-    cluster.on('exit', (worker, code, signal) => {
-        console.log(`worker ${worker.process.pid} died`);
     });
-} else {
-    hub.lock(proxyfetcher, function (unlock) {
-        proxyfetcher();
-        setTimeout(unlock, 3000);
-    });
-}
+} else
+    runTasks(key_range[0]);
 
 var checkLastKey = function (db, callback) {
     var cursor = db.collection('company').find(

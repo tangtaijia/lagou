@@ -7,12 +7,12 @@ var util = require('util');
 var saver = require('./saver');
 var jobs = require('./jobs');
 var proxy = require('./proxy');
+var taskworker = require('./taskworker');
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
-var proxyips = require('./readfiledata')('proxyips.json');
 var try_count = 0;
 
 var self = module.exports = function (key, with_job, callback) {
-    proxy(function (proxyip) {
+    taskworker.getValidIp(function (proxyip) {
         proxy_url = proxyip ? ('http://' + proxyip.ip + ':' + proxyip.port) : 'localhost';
         var options = {
             url: util.format('http://www.lagou.com/gongsi/%s.html', key),
@@ -41,8 +41,9 @@ var self = module.exports = function (key, with_job, callback) {
                     ++try_count;
                     if (try_count > 3) {
                         console.error(new Date() + ' fetch company error:' + error + ', key:' + key);
-                        proxy.addProxyError(proxyip, error);
-                        callback(key + ' not found!!');
+                        taskworker.addInvalid(JSON.stringify(proxyip),function (err, reply) {
+                            callback(key + ' not found!!');
+                        });
                     } else if (callback)
                         self(key, with_job, callback);
                 }

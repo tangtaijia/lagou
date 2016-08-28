@@ -5,13 +5,13 @@ var http = require('http');
 var sleep = require('system-sleep');
 var util = require('util');
 var proxy = require('./proxy');
+var taskworker = require('./taskworker');
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
-var proxyips = require('./readfiledata')('proxyips.json');
 var pageSize = 10;
 var jobs = [];
 var try_count = 0;
 var self = module.exports = function (key, pageNo, callback) {
-    proxy(function (proxyip) {
+    taskworker.getValidIp(function (proxyip) {
         proxy_url = proxyip ? ('http://' + proxyip.ip + ':' + proxyip.port) : 'localhost';
         var options = {
             url: 'http://www.lagou.com/gongsi/searchPosition.json',

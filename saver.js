@@ -4,7 +4,6 @@ var assert = require('assert');
 var util = require('util');
 var sleep = require('system-sleep');
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
-var proxyips = require('./readfiledata')('proxyips.json');
 var retry_count = 0;
 
 var self = module.exports = function (data, type, callback) {
