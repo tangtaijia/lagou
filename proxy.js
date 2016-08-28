@@ -29,10 +29,10 @@ var valid_ips = exports.valid_ips = function (proxyips) {
 var verify = exports.verify = function (proxyips, index, verify_count, callback) {
     index = index >= proxyips.length ? 0 : index;
     var proxyip = proxyips[index];
-    if (proxyip.errors) {
-        verify(proxyips, ++index, verify_count, callback);
-    } else if (++verify_count > proxyips.length) {
+    if (++verify_count > proxyips.length) {
         callback(false);
+    } else if (proxyip.errors) {
+        verify(proxyips, ++index, verify_count, callback);
     } else {
         var options = {
             url: 'http://do.tangtaijia.com/',
