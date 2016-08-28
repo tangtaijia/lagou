@@ -43,7 +43,7 @@ var insertDocument = function (db, data, type, pcallback, callback) {
         if (++retry_count > 3) {
             assert.notEqual(undefined, db);
         } else {
-            util.log('insert Document error: db undefined, key:' + key);
+            util.log('insert Document error: db undefined, key:' + data.key);
             sleep(1000);
             pcallback();
         }
@@ -55,7 +55,7 @@ var insertDocument = function (db, data, type, pcallback, callback) {
             if (++retry_count > 3) {
                 assert.equal(null, err);
             } else {
-                util.log('insert Document error: ' + err + ', key:' + key);
+                util.log('insert Document error: ' + err + ', key:' + data.key);
                 sleep(1000);
                 pcallback();
             }
@@ -70,7 +70,7 @@ var updateDocument = function (db, data, type, pcallback, callback) {
         if (++retry_count > 3) {
             assert.notEqual(undefined, db);
         } else {
-            util.log('update Document error: db undefined, key:' + key);
+            util.log('update Document error: db undefined, key:' + data.key);
             sleep(1000);
             pcallback();
         }
@@ -86,7 +86,7 @@ var updateDocument = function (db, data, type, pcallback, callback) {
                 if (++retry_count > 3) {
                     assert.equal(null, err);
                 } else {
-                    util.log('update Document error: ' + err + ', key:' + key);
+                    util.log('update Document error: ' + err + ', key:' + data.key);
                     sleep(1000);
                     pcallback();
                 }
@@ -101,7 +101,7 @@ var checkDocument = function (db, data, type, pcallback, insertCallback, updateC
         if (++retry_count > 3) {
             assert.notEqual(undefined, db);
         } else {
-            util.log('check Document error: db undefined, key:' + key);
+            util.log('check Document error: db undefined, key:' + data.key);
             sleep(1000);
             pcallback();
         }
@@ -112,7 +112,7 @@ var checkDocument = function (db, data, type, pcallback, insertCallback, updateC
             if (++retry_count > 3) {
                 assert.equal(null, err);
             } else {
-                util.log('check Document error: ' + err + ', key:' + key);
+                util.log('check Document error: ' + err + ', key:' + data.key);
                 sleep(1000);
                 pcallback();
             }

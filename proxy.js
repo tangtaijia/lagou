@@ -22,7 +22,7 @@ exports = module.exports = function (callback) {
 
 var valid_ips = exports.valid_ips = function (proxyips) {
     return proxyips.ips.filter(function (value) {
-        return !value.errors;
+        return value && !value.errors;
     });
 };
 
@@ -59,7 +59,7 @@ var addProxyError = exports.addProxyError = function (proxyip, error) {
     var change = false;
     if (proxyip) {
         proxyips.ips.forEach(function (item, index) {
-            if (item.ip == proxyip.ip && item.port == proxyip.port) {
+            if (item && item.ip == proxyip.ip && item.port == proxyip.port) {
                 change = true;
                 var ownerror = false;
                 var errors = item.errors;

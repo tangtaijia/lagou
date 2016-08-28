@@ -15,6 +15,7 @@
     "yargs": "latest",
     "mkdirp": "latest",
     "cluster": "latest",
-    "os": "latest"
+    "os": "latest",
+    "cluster-hub":"latest"
   }
 }

@@ -8,8 +8,10 @@ var assert = require('assert');
 var mkdirp = require('mkdirp');
 var crypto = require('crypto');
 var exec = require('child_process').exec;
+var Hub  = require('cluster-hub');
 var fetch = require('./fetch');
 var cluster = require('cluster');
+var proxyfetcher = require('./proxyfetcher');
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 var yargs = require('yargs').argv;
 var max_threads = yargs.t || 3;
@@ -18,6 +20,7 @@ var is_continue = yargs.c || false;
 var with_job = yargs.j || false;
 var key_range = getKeyRange(yargs.r);
 var taskId = crypto.createHash('md5').update(new Date().toISOString()).digest("hex");
+var hub = new Hub();
 
 if (cluster.isMaster) {
     var runfork = false;
@@ -52,9 +55,11 @@ if (cluster.isMaster) {
     cluster.on('exit', (worker, code, signal) => {
         console.log(`worker ${worker.process.pid} died`);
     });
-
 } else {
-    require('./proxyfetcher')();
+    hub.lock(proxyfetcher, function (unlock) {
+        proxyfetcher();
+        setTimeout(unlock, 3000);
+    });
 }
 
 var checkLastKey = function (db, callback) {

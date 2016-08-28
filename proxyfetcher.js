@@ -107,7 +107,7 @@ var refreshIps = exports.refreshIps = function (callback) {
     var remain_ips = require('./readfiledata')('proxyips.json');
     var remainIps = remain_ips && remain_ips.ips ? remain_ips.ips : [];
 
-    if (!remainIps.length || proxy.valid_ips(remain_ips).length < 70) {
+    if (!remainIps.length || proxy.valid_ips(remain_ips).length < 180) {
         if (remainIps.length)
             proxyips.ips = removeErrorIps();
         if (remainIps.length)
@@ -117,7 +117,10 @@ var refreshIps = exports.refreshIps = function (callback) {
         runTask(function (proxyips_arr) {
             proxyips_arr.forEach(function (value, index) {
                 remainIps.forEach(function (remain_ip, r_index) {
-                    if (remain_ip.ip == value.ip && remain_ip.port == value.port)
+                    if (!value) {
+                        console.log('value is empty, ' + value + '   ' + index, proxyips_arr);
+                    }
+                    if (value && remain_ip.ip == value.ip && remain_ip.port == value.port)
                         remainIps.splice(r_index, 1);
                 });
             });
@@ -153,4 +156,4 @@ var removeErrorIps = exports.removeErrorIps = function () {
     return remainIps;
 };
 
-self();
+// self();
