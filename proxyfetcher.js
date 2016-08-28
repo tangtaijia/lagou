@@ -12,8 +12,7 @@ var proxyips = require('./readfiledata')('proxyips.json');
 var self = exports = module.exports = function () {
     refreshIps(function (result) {
         if (result)
-            util.log(result);
-        sleep(5000);
+            util.log('refresh ip result:' + result);
     });
 };
 var runTask = function (pcallback) {
@@ -49,7 +48,7 @@ var runTask = function (pcallback) {
             results.forEach(function (value, index) {
                 new_ips = new_ips.concat(value);
             });
-            util.log(new_ips.length);
+            util.log('fetch new ips num:' + new_ips.length);
             if (pcallback)
                 pcallback(new_ips);
         });
@@ -104,28 +103,6 @@ var parseIps = function (url, $, callback) {
     callback(proxyips_arr);
 };
 
-var verify = exports.verify = function (proxyips, index, callback) {
-    if (index >= proxyips.length)
-        callback(proxyips);
-    var proxyip = proxyips[index];
-    var options = {
-        url: 'http://do.tangtaijia.com/',
-        proxy: 'http://' + proxyip.ip + ':' + proxyip.port,
-        timeout: config.timeout
-    };
-    request(options, function (error, response, html) {
-        if (!error) {
-            var $ = cheerio.load(html);
-            if (!$('title').html() || $('title').html().indexOf('Nginx') == -1)
-                proxyips.splice(index, 1);
-            else
-                verify(proxyips, ++index, callback);
-        } else {
-            proxyips.splice(index, 1);
-        }
-    });
-};
-
 var refreshIps = exports.refreshIps = function (callback) {
     var remain_ips = require('./readfiledata')('proxyips.json');
     var remainIps = remain_ips && remain_ips.ips ? remain_ips.ips : [];
@@ -133,7 +110,7 @@ var refreshIps = exports.refreshIps = function (callback) {
     if (!remainIps.length || proxy.valid_ips(remain_ips).length < 70) {
         if (remainIps.length)
             proxyips.ips = removeErrorIps();
-        if(remainIps.length)
+        if (remainIps.length)
             util.log('proxy ip nums:' + proxy.valid_ips(proxyips).length + '/' + proxyips.ips.length);
         else
             util.log('proxy ip nums:0');
@@ -148,12 +125,12 @@ var refreshIps = exports.refreshIps = function (callback) {
             remainIps = remainIps ? remainIps.concat(proxyips_arr) : proxyips_arr;
             proxy.writeFile('proxyips.json', {"ips": remainIps});
             util.log('rewrite ips, num: ' + remainIps.length);
-            sleep(5000);
+            sleep(30000);
             refreshIps(callback);
         });
     } else {
-        util.log('ips ok, num: ' + remainIps.length);
-        sleep(5000);
+        util.log('ips ok, : ' + proxy.valid_ips(remain_ips).length + '/' + remainIps.length);
+        sleep(30000);
         refreshIps(callback);
     }
 
@@ -171,7 +148,7 @@ var removeErrorIps = exports.removeErrorIps = function () {
     });
 
     if (change) {
-        writeFile('proxyips.json', {"ips": remainIps});
+        proxy.writeFile('proxyips.json', {"ips": remainIps});
     }
     return remainIps;
 };

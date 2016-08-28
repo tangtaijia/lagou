@@ -9,6 +9,7 @@ var proxyips = require('./readfiledata')('proxyips.json');
 var verify_count = 0;
 
 exports = module.exports = function (callback) {
+    proxyips = require('./readfiledata')('proxyips.json');
     if (proxyips.ips) {
         var random_index = Math.floor(Math.random() * (proxyips.ips.length - 1)) + 1;
         verify(proxyips.ips, random_index, verify_count, function (proxyip) {

@@ -60,7 +60,6 @@ function fetchCompany($, key, with_job, callback) {
         company.nick_name = title_ele.text().trim();
         parseCompany($, function (company) {
             company.key = key;
-            util.log(key, with_job, company.online_job_num);
             if (with_job && parseInt(company.online_job_num)) {
                 jobs(key, 1, function (jobs) {
                     company.jobs = jobs;
