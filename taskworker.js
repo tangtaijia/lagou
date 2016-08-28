@@ -29,7 +29,7 @@ var gen_ips = exports.gen_ips = function () {
     client.scard('valid_ips', function (err, reply) {
         console.info('num of valid_ips:' + reply);
         // fetch new ips
-        if (!reply || reply < 2200) {
+        if (!reply || reply < 500) {
             proxyfetcher.runTask(function (proxyips) {
                 console.info('new ips:', proxyips.length);
                 proxyips.forEach(function (value, index) {
@@ -44,25 +44,8 @@ var gen_ips = exports.gen_ips = function () {
                 });
             });
         } else {
-            // use valid ips
-            client.srandmember('valid_ips', function (err, reply) {
-                console.log('randowm valid record:' + reply, JSON.parse(reply));
-                console.info('port', JSON.parse(reply).port);
-                if (JSON.parse(reply).port == 8080) {
-
-                    addInvalid(reply, function (err, reply) {
-                        gen_valid(function (proxyip) {
-                            console.log(proxyip);
-                            gen_ips();
-                            sleep(1000);
-                        });
-                    });
-
-                } else {
-                    gen_ips();
-                    sleep(1000);
-                }
-            });
+            gen_ips();
+            sleep(1000);
         }
     });
 };
