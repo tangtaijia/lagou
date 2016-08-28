@@ -39,6 +39,15 @@ var self = module.exports = function (data, type, callback) {
 };
 
 var insertDocument = function (db, data, type, pcallback, callback) {
+    if(!db) {
+        if (++retry_count > 3) {
+            assert.notEqual(undefined, db);
+        } else {
+            util.log('insert Document error: db undefined, key:' + key);
+            sleep(1000);
+            pcallback();
+        }
+    }
     data.create_time = new Date();
     data.update_time = new Date();
     db.collection(type).insertOne(data, function (err, result) {
@@ -46,7 +55,7 @@ var insertDocument = function (db, data, type, pcallback, callback) {
             if (++retry_count > 3) {
                 assert.equal(null, err);
             } else {
-                util.log('insert Document error: ' + updateDocument() + ', key:' + key);
+                util.log('insert Document error: ' + err + ', key:' + key);
                 sleep(1000);
                 pcallback();
             }
@@ -57,6 +66,15 @@ var insertDocument = function (db, data, type, pcallback, callback) {
 };
 
 var updateDocument = function (db, data, type, pcallback, callback) {
+    if(!db) {
+        if (++retry_count > 3) {
+            assert.notEqual(undefined, db);
+        } else {
+            util.log('update Document error: db undefined, key:' + key);
+            sleep(1000);
+            pcallback();
+        }
+    }
     db.collection(type).updateOne(
         {"name": data.name},
         {
@@ -68,7 +86,7 @@ var updateDocument = function (db, data, type, pcallback, callback) {
                 if (++retry_count > 3) {
                     assert.equal(null, err);
                 } else {
-                    util.log('update Document error: ' + updateDocument() + ', key:' + key);
+                    util.log('update Document error: ' + err + ', key:' + key);
                     sleep(1000);
                     pcallback();
                 }
@@ -79,13 +97,22 @@ var updateDocument = function (db, data, type, pcallback, callback) {
 };
 
 var checkDocument = function (db, data, type, pcallback, insertCallback, updateCallback) {
+    if(!db) {
+        if (++retry_count > 3) {
+            assert.notEqual(undefined, db);
+        } else {
+            util.log('check Document error: db undefined, key:' + key);
+            sleep(1000);
+            pcallback();
+        }
+    }
     var cursor = db.collection(type).find({"name": data.name}).limit(1);
     cursor.toArray(function (err, items) {
         if (err) {
             if (++retry_count > 3) {
                 assert.equal(null, err);
             } else {
-                util.log('check Document error: ' + updateDocument() + ', key:' + key);
+                util.log('check Document error: ' + err + ', key:' + key);
                 sleep(1000);
                 pcallback();
             }
