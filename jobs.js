@@ -10,7 +10,7 @@ var pageSize = 10;
 var jobs = [];
 var try_count = 0;
 var self = module.exports = function (key, pageNo, callback) {
-    taskworker.getValidIp(function (proxyip) {
+    taskworker.getValidIp(false, function (proxyip) {
         proxy_url = proxyip ? ('http://' + proxyip.ip + ':' + proxyip.port) : 'localhost';
         var options = {
             url: 'http://www.lagou.com/gongsi/searchPosition.json',

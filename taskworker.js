@@ -29,18 +29,13 @@ var gen_ips = exports.gen_ips = function () {
     client.scard('valid_ips', function (err, reply) {
         console.info('num of valid_ips:' + reply);
         // fetch new ips
-        if (!reply || reply < 500) {
+        if (!reply || reply < 1045) {
             proxyfetcher.runTask(function (proxyips) {
                 console.info('new ips:', proxyips.length);
-                proxyips.forEach(function (value, index) {
-                    proxyips[index] = JSON.stringify(value);
-                });
-                client.sadd(['ips'].concat(proxyips), function (err, reply) {
-                    gen_valid(function (proxyip) {
-                        console.log(proxyip);
-                        gen_ips();
-                        sleep(1000);
-                    });
+                addIps(proxyips,  function (err, reply) {
+                    console.info('save ' + reply + ' new ips');
+                    gen_ips();
+                    sleep(1000);
                 });
             });
         } else {
@@ -56,32 +51,48 @@ var addInvalid = exports.addInvalid = function (ip, callback) {
     });
 };
 
-var getValidIp = exports.getValidIp = function (callback) {
-    gen_valid(function (proxyip) {
-        proxyip = JSON.parse(proxyip);
-        var options = {
-            url: 'http://do.tangtaijia.com/verify.html',
-            proxy: 'http://' + proxyip.ip + ':' + proxyip.port,
-            timeout: config.timeout
-        };
-        request(options, function (error, response, html) {
-            if (!error) {
-                if (html && html.trim() == 'success')
-                    callback(proxyip);
-                else {
-                    var $ = cheerio.load(html);
-                    console.error(new Date() + ' verify proxy ' + JSON.stringify(proxyip) + ', statuscode:' + response.statusCode + ', title:' + $('title').text());
+var addIps = exports.addIps = function (ips, callback) {
+    ips.forEach(function (value, index) {
+        ips[index] = JSON.stringify(value);
+        console.info(value);
+    });
+    client.sadd(['ips'].concat(ips), function (err, reply) {
+        callback(err, reply);
+    });
+};
+
+var getValidIp = exports.getValidIp = function (pass, callback) {
+    if (!pass) {
+        gen_valid(function (proxyip) {
+            try {
+                proxyip = JSON.parse(proxyip);
+            } catch (e) {
+                return getValidIp(pass, callback);
+            }
+            var options = {
+                url: 'http://do.tangtaijia.com/verify.html',
+                proxy: 'http://' + proxyip.ip + ':' + proxyip.port,
+                timeout: config.timeout
+            };
+            request(options, function (error, response, html) {
+                if (!error) {
+                    if (html && html.trim() == 'success')
+                        callback(proxyip);
+                    else {
+                        var $ = cheerio.load(html);
+                        console.error(new Date() + ' verify proxy ' + JSON.stringify(proxyip) + ', statuscode:' + response.statusCode + ', title:' + $('title').text());
+                        addInvalid(JSON.stringify(proxyip), function (err, reply) {
+                            getValidIp(pass, callback);
+                        });
+                    }
+                } else {
+                    console.error(new Date() + ' verify proxy ' + JSON.stringify(proxyip) + ', error:' + error);
                     addInvalid(JSON.stringify(proxyip), function (err, reply) {
-                        getValidIp(callback);
-                        sleep(100);
+                        getValidIp(pass, callback);
                     });
                 }
-            } else {
-                console.error(new Date() + ' verify proxy ' + JSON.stringify(proxyip) + ', error:' + error);
-                addInvalid(JSON.stringify(proxyip), function (err, reply) {
-                    getValidIp(callback);
-                });
-            }
+            });
         });
-    });
+    } else
+        callback(false);
 };

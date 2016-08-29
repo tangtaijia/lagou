@@ -11,8 +11,8 @@ var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 var try_count = 0;
 
 var self = module.exports = function (key, with_job, callback) {
-    taskworker.getValidIp(function (proxyip) {
-        proxy_url = proxyip ? ('http://' + proxyip.ip + ':' + proxyip.port) : 'localhost';
+    taskworker.getValidIp(false, function (proxyip) {
+        var proxy_url = proxyip ? ('http://' + proxyip.ip + ':' + proxyip.port) : 'localhost';
         var options = {
             url: util.format('http://www.lagou.com/gongsi/%s.html', key),
             headers: {
@@ -21,7 +21,7 @@ var self = module.exports = function (key, with_job, callback) {
             maxRedirects: 10,
             timeout: config.timeout
         };
-        if(proxy_url != 'localhost')
+        if (proxy_url != 'localhost')
             options.proxy = proxy_url;
         process.setMaxListeners(0);
         util.log('fetch page: ' + options.url + ', with proxy:' + proxy_url);
@@ -40,7 +40,7 @@ var self = module.exports = function (key, with_job, callback) {
                     ++try_count;
                     if (try_count > 3) {
                         console.error(new Date() + ' fetch company error:' + error + ', key:' + key);
-                        taskworker.addInvalid(JSON.stringify(proxyip),function (err, reply) {
+                        taskworker.addInvalid(JSON.stringify(proxyip), function (err, reply) {
                             callback(key + ' not found!!');
                         });
                     } else if (callback)
