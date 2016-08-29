@@ -4,7 +4,6 @@ var cheerio = require('cheerio');
 var http = require('http');
 var sleep = require('system-sleep');
 var util = require('util');
-var proxy = require('./proxy');
 var taskworker = require('./taskworker');
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 var pageSize = 10;

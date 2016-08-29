@@ -6,7 +6,6 @@ var sleep = require('system-sleep');
 var util = require('util');
 var saver = require('./saver');
 var jobs = require('./jobs');
-var proxy = require('./proxy');
 var taskworker = require('./taskworker');
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 var try_count = 0;
