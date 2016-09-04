@@ -10,66 +10,55 @@ var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 var yargs = require('yargs').argv;
 var test = yargs.t || false;
 var detail = yargs.d || false;
+var local = yargs.l || false;
 var try_count = 0;
+var urlsArr = [
+    // ['http://cn-proxy.com/', 'http://cn-proxy.com/archives/218'],
+    // ['http://proxy.com.ru/', 'http://proxy.com.ru/touming/', 'http://proxy.com.ru/niming/', 'http://proxy.com.ru/gaoni/'],
+    ['http://www.xicidaili.com/nn/', 'http://www.xicidaili.com/nt/', 'http://www.xicidaili.com/wn/', 'http://www.xicidaili.com/wt/'],
+    ['http://www.kuaidaili.com/free/']
+];
 
 var runTask = exports.runTask = function (pcallback) {
     var callbacks = [];
-    callbacks.push(function (callback) {
-        fetchIps('http://cn-proxy.com/', [], function (url, result) {
-            sleep(5000);
-            fetchIps('http://cn-proxy.com/archives/218', result, function (url, result) {
-                callback(null, result);
-            });
-        });
-    });
-    callbacks.push(function (callback) {
-        fetchIps('http://proxy.com.ru/', [], function (url, result) {
-            sleep(2000);
-            fetchIps('http://proxy.com.ru/touming/', result, function (url, result) {
+    var callbacksArr = [];
+    urlsArr.forEach(function (urls, index) {
+        callbacks = [];
+        urls.forEach(function (url, uindex) {
+            callbacks.push(function (callback) {
                 sleep(2000);
-                fetchIps('http://proxy.com.ru/niming/', result, function (url, result) {
-                    sleep(2000);
-                    fetchIps('http://proxy.com.ru/gaoni/', result, function (url, result) {
-                        callback(null, result);
-                    });
-                });
+                fetchIps(url, callback);
             });
         });
+        callbacksArr.push(callbacks);
     });
-    callbacks.push(function (callback) {
-        fetchIps('http://www.xicidaili.com/nn/', [], function (url, result) {
-            sleep(3000);
-            fetchIps('http://www.xicidaili.com/nt/', result, function (url, result) {
-                sleep(3000);
-                fetchIps('http://www.xicidaili.com/wn/', result, function (url, result) {
-                    sleep(3000);
-                    fetchIps('http://www.xicidaili.com/wt/', result, function (url, result) {
-                        callback(null, result);
-                    });
-                });
+
+    async.mapLimit(callbacksArr, 2, function (callbacks, callback) {
+        async.series(callbacks,
+            function (err, results) {
+                callback(null, results);
             });
-        });
+    }, function (err, result) {
+        if (pcallback)
+            pcallback(result);
     });
-    callbacks.push(function (callback) {
-        fetchIps('http://www.kuaidaili.com/free/', [], function (url, result) {
-            callback(null, result);
-        });
-    });
-    async.series(callbacks,
-        function (err, results) {
-            var new_ips = [];
-            results.forEach(function (value, index) {
-                new_ips = new_ips.concat(value);
-            });
-            util.log('fetch new ips num:' + new_ips.length);
-            if (pcallback)
-                pcallback(new_ips);
-        });
 };
 
-var fetchIps = function (url, result, callback) {
-    taskworker.getValidIp(false, function (proxyip) {
+var saveIps = function (result, url, callback) {
+    if (detail)
+        util.log(JSON.stringify(result, null, 2));
+    util.log(url, 'fetch', result.length);
+    taskworker.addIps(result, function (err, reply) {
+        util.log(url, 'save', reply);
+        if (callback)
+            callback(null, result);
+    });
+};
+
+var fetchIps = function (url, callback) {
+    taskworker.getValidIp(local, function (proxyip) {
         var proxy_url = proxyip ? ('http://' + proxyip.ip + ':' + proxyip.port) : 'localhost';
+        util.log(url, 'fetching... with proxy: ' + proxy_url);
         var options = {
             url: url,
             headers: {
@@ -85,74 +74,56 @@ var fetchIps = function (url, result, callback) {
             if (!error) {
                 var $ = cheerio.load(html);
                 parseIps(url, $, function (proxyips_arr) {
-                    util.log(url, proxyips_arr.length + ' new ips' + ', with proxy:' + proxy_url);
-                    var redirect = false;
                     var current_page;
                     var next_page;
                     var current_uri = response.request.uri;
+                    var nexturl = '';
                     if (url.indexOf('http://www.xicidaili.com/') > -1) {
                         current_page = $('.pagination .current');
                         next_page = current_page.next();
                         if (next_page.length && next_page.text() < 6) {
-                            redirect = true;
-                            url = current_uri.protocol + '//' + current_uri.host + '/' + next_page.attr('href');
-                            fetchIps(url,
-                                result ? result.concat(proxyips_arr) : proxyips_arr,
-                                callback);
-                            sleep(1500);
+                            nexturl = current_uri.protocol + '//' + current_uri.host + '/' + next_page.attr('href');
                         }
                     } else if (url.indexOf('http://proxy.com.ru/') > -1) {
                         current_page = $('font[color="red"]');
                         next_page = current_page.next();
                         if (next_page.length && next_page.text().replace(/[^\d]/g, '') < 6) {
-                            redirect = true;
                             var path = current_uri.path.lastIndexOf('/') == current_uri.path.length - 1 ? current_uri.path : '';
-                            url = current_uri.protocol + '//' + current_uri.host + path + next_page.attr('href');
-                            fetchIps(url,
-                                result ? result.concat(proxyips_arr) : proxyips_arr,
-                                callback);
-                            sleep(1500);
+                            nexturl = current_uri.protocol + '//' + current_uri.host + path + next_page.attr('href');
                         }
                     } else if (url.indexOf('http://www.kuaidaili.com/') > -1) {
                         current_page = $('div#listnav a.active');
                         next_page = current_page.closest('li').next();
                         if (next_page.length && next_page.text().replace(/[^\d]/g, '') < 6) {
-                            redirect = true;
-                            url = current_uri.protocol + '//' + current_uri.host + next_page.find('a').attr('href');
-                            console.info('fetching ' + url);
-                            fetchIps(url,
-                                result ? result.concat(proxyips_arr) : proxyips_arr,
-                                callback);
-                            sleep(1500);
-                            return false;
+                            nexturl = current_uri.protocol + '//' + current_uri.host + next_page.find('a').attr('href');
                         }
                     }
-                    if (!redirect) {
-                        console.info('fetching ' + url);
-                        callback(url, result ? result.concat(proxyips_arr) : proxyips_arr);
+
+                    var nextcall = callback;
+                    if (nexturl) {
+                        nextcall = function () {
+                            fetchIps(nexturl, callback);
+                            sleep(2000);
+                        };
                     }
+                    saveIps(proxyips_arr, url, nextcall);
                 });
             } else {
-                console.info('error , now url is: ' + url);
+                console.error('error , now url is: ' + url);
                 if (response && response.statusCode && response.statusCode == 400) {
                     if (callback) {
-                        console.info('now num:' + result.length + ', count:' + try_count + ', error:' + error);
-                        console.info('fetching ' + url);
-                        fetchIps(url, result, callback);
+                        console.error(url + ' count:' + try_count + ', error:' + error);
+                        fetchIps(url, callback);
                         sleep(1500);
                     }
                 } else {
                     ++try_count;
                     if (try_count > 3) {
-                        console.error(new Date() + ' fetch ' + url + ' for new proxy error: ' + error + ', with proxy:' + proxy_url);
-                        // taskworker.addInvalid(JSON.stringify(proxyip), function (err, reply) {
-                        //     callback(url, []);
-                        // });
-                        callback(url, []);
+                        console.error(url + new Date() + ' fetch ' + ' for new proxy error: ' + error + ', with proxy:' + proxy_url);
+                        callback([]);
                     } else if (callback) {
-                        console.info('now num:' + result.length + ', count:' + try_count + ',error' + error);
-                        console.info('fetching ' + url);
-                        fetchIps(url, result, callback);
+                        console.error(url + ' count:' + try_count + ', error:' + error);
+                        fetchIps(url, callback);
                         sleep(1500);
                     }
                 }
@@ -207,13 +178,8 @@ var parseIps = function (url, $, callback) {
 };
 
 if (test) {
-    runTask(function (proxyips) {
-        if (detail)
-            console.log(JSON.stringify(proxyips, null, 2));
-        console.log('fetch ip num:' + proxyips.length);
-        taskworker.addIps(proxyips,  function (err, reply) {
-            console.info('save ' + reply + ' new ips');
-            process.exit();
-        });
+    runTask(function (domains) {
+        util.log('done! fetch domain num', domains.length);
+        process.exit();
     });
 }

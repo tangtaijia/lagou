@@ -12,7 +12,7 @@ client.on("error", function (err) {
 });
 
 client.on('connect', function () {
-    console.log('connected');
+    // console.log('connected');
 });
 
 var gen_valid = function (callback) {
@@ -54,7 +54,6 @@ var addInvalid = exports.addInvalid = function (ip, callback) {
 var addIps = exports.addIps = function (ips, callback) {
     ips.forEach(function (value, index) {
         ips[index] = JSON.stringify(value);
-        console.info(value);
     });
     client.sadd(['ips'].concat(ips), function (err, reply) {
         callback(err, reply);
