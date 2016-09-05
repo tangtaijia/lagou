@@ -9,7 +9,6 @@ var proxyfetcher = require('./proxyfetcher');
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 var yargs = require('yargs').argv;
 var filter = yargs.f || false;
-var all = yargs.a || false;
 client.on("error", function (err) {
     console.log("Error " + err);
 });
@@ -17,13 +16,18 @@ client.on("error", function (err) {
 var filterIps = function (key, callback) {
     client.srandmember(key, function (err, proxyip) {
         if (!proxyip) {
-            console.error('there is no ip, please fetch first!');
-            process.exit();
+            if(key == 'ips') {
+                console.error('there is no ip, please fetch first!');
+                process.exit();
+            } else {
+                sleep(5000);
+                return filterIps(key, callback);
+            }
         }
         try {
             proxyip = JSON.parse(proxyip);
         } catch (e) {
-            return filterIps(callback);
+            return filterIps(key, callback);
         }
         var options = {
             url: 'http://do.tangtaijia.com/verify.html',
@@ -36,7 +40,7 @@ var filterIps = function (key, callback) {
                     client.sadd('white_ips', JSON.stringify(proxyip), function (err, reply) {
                         if (callback)
                             callback(err, reply);
-                        filterIps(key);
+                        filterIps(key, callback);
                     });
                 });
             } else {
@@ -45,7 +49,7 @@ var filterIps = function (key, callback) {
                     client.sadd('black_ips', JSON.stringify(proxyip), function (err, reply) {
                         if (callback)
                             callback(err, reply);
-                        filterIps(key);
+                        filterIps(key, callback);
                     });
                 });
             }
@@ -115,10 +119,8 @@ exports.addBlackIp = function (ip, callback) {
 if (yargs.$0 == 'proxyhandler.js') {
     if (filter) {
         filterIps('ips');
-        if (all) {
-            filterIps('white_ips');
-            filterIps('black_ips');
-        }
+        filterIps('white_ips');
+        filterIps('black_ips');
     } else {
         genIps();
     }
