@@ -9,6 +9,7 @@ var proxyfetcher = require('./proxyfetcher');
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 var yargs = require('yargs').argv;
 var filter = yargs.f || false;
+var filter_timeout = yargs.t || 3000;
 client.on("error", function (err) {
     console.log("Error " + err);
 });
@@ -32,7 +33,7 @@ var filterIps = function (key, callback) {
         var options = {
             url: 'http://do.tangtaijia.com/verify.html',
             proxy: 'http://' + proxyip.ip + ':' + proxyip.port,
-            timeout: 3000
+            timeout: filter_timeout
         };
         request(options, function (error, response, html) {
             if (!error && html && html.trim() == 'success') {
