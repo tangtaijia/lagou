@@ -12,9 +12,6 @@ var pageSize = 10;
 var jobs = [];
 var try_count = 0;
 var self = module.exports = function (key, pageNo, callback) {
-    var randnum = Math.random() * 1000;
-    sleep(randnum);
-    console.info('random',randnum);
     proxyhandler.getRandWhiteIp(local, function (proxyip) {
         proxy_url = proxyip ? ('http://' + proxyip.ip + ':' + proxyip.port) : 'localhost';
         var options = {
