@@ -9,6 +9,7 @@ var proxyfetcher = require('./proxyfetcher');
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 var yargs = require('yargs').argv;
 var filter = yargs.f || false;
+var all = yargs.a || false;
 client.on("error", function (err) {
     console.log("Error " + err);
 });
@@ -114,8 +115,10 @@ exports.addBlackIp = function (ip, callback) {
 if (yargs.$0 == 'proxyhandler.js') {
     if (filter) {
         filterIps('ips');
-        filterIps('white_ips');
-        filterIps('black_ips');
+        if (all) {
+            filterIps('white_ips');
+            filterIps('black_ips');
+        }
     } else {
         genIps();
     }
