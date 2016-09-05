@@ -18,7 +18,7 @@ client.on('connect', function () {
 var gen_valid = function (callback) {
     client.sdiffstore('valid_ips', 'ips', 'invalid_ips', function (err, reply) {
         client.scard('invalid_ips', function (err, reply) {
-            client.srandmember('ips', function (err, reply) {
+            client.srandmember('white_ips', function (err, reply) {
                 callback(reply);
             });
         });

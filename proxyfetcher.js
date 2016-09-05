@@ -263,8 +263,8 @@ var parseIps = function (url, $, callback) {
 };
 
 if (test) {
-    runTask(function (domains) {
-        util.log('done! fetch domain num', domains.length);
-        process.exit();
-    });
+    // runTask(function (domains) {
+    //     util.log('done! fetch domain num', domains.length);
+    //     process.exit();
+    // });
 }
