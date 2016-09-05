@@ -8,8 +8,7 @@ var assert = require('assert');
 var mkdirp = require('mkdirp');
 var crypto = require('crypto');
 var exec = require('child_process').exec;
-var fetch = require('./fetch');
-var cluster = require('cluster');
+var companyfetcher = require('./companyfetcher');
 var proxyfetcher = require('./proxyfetcher');
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 var yargs = require('yargs').argv;
@@ -53,7 +52,7 @@ function runTasks(start) {
     yargs.time = new Date();
     util.log('task: ' + taskId + ' is running');
     async.mapLimit(range(start, key_range[1]), max_threads, function (key, callback) {
-        fetch(key, with_job, function (result) {
+        companyfetcher(key, with_job, function (result) {
             util.log(result);
             callback(null, result);
             if (sleep_secs) {

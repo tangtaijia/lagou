@@ -5,7 +5,7 @@ var http = require('http');
 var sleep = require('system-sleep');
 var util = require('util');
 var async = require('async');
-var taskworker = require('./taskworker');
+var proxyhandler = require('./proxyhandler');
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 var yargs = require('yargs').argv;
 var test = yargs.t || false;
@@ -54,7 +54,7 @@ var saveIps = function (result, url, callback) {
         util.log(JSON.stringify(result, null, 2));
     util.log(url, 'fetch', result.length);
     if (result && result.length) {
-        taskworker.addIps(result, function (err, reply) {
+        proxyhandler.addIps(result, function (err, reply) {
             util.log(url, 'save', reply);
             if (callback)
                 callback(null, result);
@@ -65,7 +65,7 @@ var saveIps = function (result, url, callback) {
 };
 
 var fetchIps = function (url, callback) {
-    taskworker.getValidIp(local, function (proxyip) {
+    proxyhandler.getRandWhiteIp(local, function (proxyip) {
         var proxy_url = proxyip ? ('http://' + proxyip.ip + ':' + proxyip.port) : 'localhost';
         util.log(url, 'fetching... with proxy: ' + proxy_url);
         var options = {
@@ -262,9 +262,9 @@ var parseIps = function (url, $, callback) {
     callback(proxyips_arr);
 };
 
-if (test) {
-    // runTask(function (domains) {
-    //     util.log('done! fetch domain num', domains.length);
-    //     process.exit();
-    // });
+if (test && yargs.$0 == 'proxyfetcher.js') {
+    runTask(function (domains) {
+        util.log('done! fetch domain num', domains.length);
+        process.exit();
+    });
 }

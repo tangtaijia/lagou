@@ -13,9 +13,6 @@
     "mongodb": "latest",
     "range": "latest",
     "yargs": "latest",
-    "mkdirp": "latest",
-    "cluster": "latest",
-    "os": "latest",
-    "cluster-hub":"latest"
+    "mkdirp": "latest"
   }
 }

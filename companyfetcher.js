@@ -5,13 +5,15 @@ var http = require('http');
 var sleep = require('system-sleep');
 var util = require('util');
 var saver = require('./saver');
-var jobs = require('./jobs');
-var taskworker = require('./taskworker');
+var jobfetcher = require('./jobfetcher');
+var proxyhandler = require('./proxyhandler');
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
+var yargs = require('yargs').argv;
+var local = yargs.l || false;
 var try_count = 0;
 
 var self = module.exports = function (key, with_job, callback) {
-    taskworker.getValidIp(false, function (proxyip) {
+    proxyhandler.getRandWhiteIp(local, function (proxyip) {
         var proxy_url = proxyip ? ('http://' + proxyip.ip + ':' + proxyip.port) : 'localhost';
         var options = {
             url: util.format('http://www.lagou.com/gongsi/%s.html', key),
@@ -24,7 +26,7 @@ var self = module.exports = function (key, with_job, callback) {
         if (proxy_url != 'localhost')
             options.proxy = proxy_url;
         process.setMaxListeners(0);
-        util.log('fetch page: ' + options.url + ', with proxy:' + proxy_url);
+        util.log('fetch company url: ' + options.url + ', with proxy:' + proxy_url);
         request(options, function (error, response, html) {
             if (!error) {
                 var $ = cheerio.load(html);
@@ -40,7 +42,7 @@ var self = module.exports = function (key, with_job, callback) {
                     ++try_count;
                     if (try_count > 3) {
                         console.error(new Date() + ' fetch company error:' + error + ', key:' + key);
-                        taskworker.addInvalid(JSON.stringify(proxyip), function (err, reply) {
+                        proxyhandler.addBlackIp(proxyip, function (err, reply) {
                             callback(key + ' not found!!');
                         });
                     } else if (callback)
@@ -61,7 +63,7 @@ function fetchCompany($, key, with_job, callback) {
         parseCompany($, function (company) {
             company.key = key;
             if (with_job && parseInt(company.online_job_num)) {
-                jobs(key, 1, function (jobs) {
+                jobfetcher(key, 1, function (jobs) {
                     company.jobs = jobs;
                     storeCompany(company, function (result) {
                         if (result)

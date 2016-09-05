@@ -4,13 +4,18 @@ var cheerio = require('cheerio');
 var http = require('http');
 var sleep = require('system-sleep');
 var util = require('util');
-var taskworker = require('./taskworker');
+var proxyhandler = require('./proxyhandler');
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
+var yargs = require('yargs').argv;
+var local = yargs.l || false;
 var pageSize = 10;
 var jobs = [];
 var try_count = 0;
 var self = module.exports = function (key, pageNo, callback) {
-    taskworker.getValidIp(false, function (proxyip) {
+    var randnum = Math.random() * 1000;
+    sleep(randnum);
+    console.info('random',randnum);
+    proxyhandler.getRandWhiteIp(local, function (proxyip) {
         proxy_url = proxyip ? ('http://' + proxyip.ip + ':' + proxyip.port) : 'localhost';
         var options = {
             url: 'http://www.lagou.com/gongsi/searchPosition.json',
@@ -35,7 +40,9 @@ var self = module.exports = function (key, pageNo, callback) {
                     ++try_count;
                     if (try_count > 3) {
                         console.error(new Date() + ' fetch job error, status code: ' + response.statusCode + ', proxy_url:' + proxy_url);
-                        callback(jobs);
+                        proxyhandler.addBlackIp(proxyip, function (err, reply) {
+                            callback(jobs);
+                        });
                     } else {
                         self(key, options.form.pageNo, callback);
                         sleep(8000);
@@ -43,7 +50,7 @@ var self = module.exports = function (key, pageNo, callback) {
                 } else {
                     var result = JSON.parse(html);
                     pageCount = parseInt(result.content.data.page.totalCount / pageSize) + (result.content.data.page.totalCount % pageSize ? 1 : 0);
-                    util.log('fetch joblist json with proxy: ' + proxy_url + ', page:' + options.form.pageNo + '/' + pageCount + ', key:' + key);
+                    util.log('fetch jobs json with proxy: ' + proxy_url + ', page:' + options.form.pageNo + '/' + pageCount + ', key:' + key);
                     jobs = jobs.concat(result.content.data.page.result);
                     ++options.form.pageNo;
                     if (options.form.pageNo < pageCount) {
