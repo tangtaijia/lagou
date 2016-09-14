@@ -63,11 +63,14 @@ function fetchCompany($, key, with_job, callback) {
         parseCompany($, function (company) {
             company.key = key;
             if (with_job && parseInt(company.online_job_num)) {
+                company.online_job_num = parseInt(company.online_job_num);
                 jobfetcher(key, 1, function (jobs) {
-                    company.jobs = jobs;
-                    storeCompany(company, function (result) {
-                        if (result)
-                            callback(result + ' company: ' + company.name + ' key: ' + key + ' successfully!!!');
+                    var job_num = jobs.length;
+                    storeJobs(jobs, function (jobs_result) {
+                        storeCompany(company, function (result) {
+                            if (result)
+                                callback(result + ' company: ' + company.name + ' key: ' + key + ' and ' + job_num + ' jobs successfully!!!');
+                        });
                     });
                 });
             } else {
@@ -153,5 +156,20 @@ function parseCompany($, callback) {
 function storeCompany(company, callback) {
     saver(company, 'company', function (type) {
         return callback(type);
+    });
+}
+
+function storeJobs(jobs, callback) {
+    var job = jobs.pop();
+    var salaryarr = job.salary.split('-');
+    if(salaryarr && salaryarr.length) {
+        job.max_salary = parseInt(salaryarr.pop());
+        job.min_salary = parseInt(salaryarr.pop());
+    }
+    saver(job, 'job', function (type) {
+        if(jobs.length)
+            storeJobs(jobs, callback);
+        else
+            return callback(type);
     });
 }
