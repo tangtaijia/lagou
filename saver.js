@@ -24,7 +24,7 @@ var self = module.exports = function (data, type, callback) {
 
 var insertDocument = function (db, data, type, pcallback, callback) {
     if(!db) {
-        if (++retry_count > 3) {
+        if (++retry_count > 15) {
             assert.notEqual(undefined, db);
         } else {
             util.log('insert Document error: db undefined, key:' + data.key);
@@ -39,7 +39,7 @@ var insertDocument = function (db, data, type, pcallback, callback) {
         { upsert: true},
         function (err, result) {
             if (err) {
-                if (++retry_count > 3) {
+                if (++retry_count > 15) {
                     assert.equal(null, err);
                 } else {
                     util.log('insert Document error: ' + err + ', key:' + data.key);
