@@ -67,10 +67,12 @@ function fetchCompany($, key, with_job, callback) {
                 jobfetcher(key, 1, function (jobs) {
                     var job_num = jobs.length;
                     storeJobs(jobs, function (jobs_result) {
-                        storeCompany(company, function (result) {
-                            if (result)
-                                callback(result + ' company: ' + company.name + ' key: ' + key + ' and ' + job_num + ' jobs successfully!!!');
-                        });
+                        if (jobs_result)
+                            util.log('company: ' + company.name + ' key: ' + key + jobs_result + ' ' + job_num + ' jobs successfully!!!');
+                    });
+                    storeCompany(company, function (result) {
+                        if (result)
+                            callback(result + ' company: ' + company.name + ' key: ' + key + ' and ' + job_num + ' jobs successfully!!!');
                     });
                 });
             } else {
@@ -161,10 +163,22 @@ function storeCompany(company, callback) {
 
 function storeJobs(jobs, callback) {
     var job = jobs.pop();
+    if(!job || !job.salary ||!job.companySize ||!job.workYear)
+        return callback('null job');
     var salaryarr = job.salary.split('-');
+    var sizearr = job.companySize.split('-');
+    var yeararr = job.workYear.split('-');
     if(salaryarr && salaryarr.length) {
         job.max_salary = parseInt(salaryarr.pop());
         job.min_salary = parseInt(salaryarr.pop());
+    }
+    if(sizearr && sizearr.length) {
+        job.max_size = parseInt(sizearr.pop());
+        job.min_size = parseInt(sizearr.pop());
+    }
+    if(salaryarr && salaryarr.length) {
+        job.max_year = parseInt(yeararr.pop());
+        job.min_year = parseInt(yeararr.pop());
     }
     saver(job, 'job', function (type) {
         if(jobs.length)
