@@ -1,5 +1,3 @@
-var redis = require('redis');
-var client = redis.createClient();
 var fs = require('fs');
 var sleep = require('system-sleep');
 var request = require('request');
@@ -7,16 +5,22 @@ var cheerio = require('cheerio');
 var util = require('util');
 var proxyfetcher = require('./proxyfetcher');
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
+var redis = require('redis');
+var local_client = redis.createClient();
+var common_client = redis.createClient(config.common_client);
 var yargs = require('yargs').argv;
 var filter = yargs.f || false;
 var white = yargs.w || false;
 var filter_timeout = yargs.t || 3000;
-client.on("error", function (err) {
-    console.log("Error " + err);
+local_client.on("error", function (err) {
+    console.log("redis Error " + err);
+});
+common_client.on("error", function (err) {
+    console.log("remote redis Error " + err);
 });
 
 var filterIps = function (key, callback) {
-    client.srandmember(key, function (err, proxyip) {
+    (key == 'ips' ? common_client : local_client).srandmember(key, function (err, proxyip) {
         if (!proxyip) {
             if(key == 'ips') {
                 console.error('there is no ip, please fetch first!');
@@ -38,8 +42,8 @@ var filterIps = function (key, callback) {
         };
         request(options, function (error, response, html) {
             if (!error && html && html.trim() == 'success') {
-                client.srem('black_ips', JSON.stringify(proxyip), function (err, reply) {
-                    client.sadd('white_ips', JSON.stringify(proxyip), function (err, reply) {
+                local_client.srem('black_ips', JSON.stringify(proxyip), function (err, reply) {
+                    local_client.sadd('white_ips', JSON.stringify(proxyip), function (err, reply) {
                         if (callback)
                             callback(err, reply);
                         filterIps(key, callback);
@@ -47,8 +51,8 @@ var filterIps = function (key, callback) {
                 });
             } else {
                 console.error(new Date(), 'proxy', JSON.stringify(proxyip), 'error', error);
-                client.srem('white_ips', JSON.stringify(proxyip), function (err, reply) {
-                    client.sadd('black_ips', JSON.stringify(proxyip), function (err, reply) {
+                local_client.srem('white_ips', JSON.stringify(proxyip), function (err, reply) {
+                    local_client.sadd('black_ips', JSON.stringify(proxyip), function (err, reply) {
                         if (callback)
                             callback(err, reply);
                         filterIps(key, callback);
@@ -63,7 +67,7 @@ var getRandWhiteIp = exports.getRandWhiteIp = function (pass, callback) {
     if (pass)
         callback(false);
     else {
-        client.srandmember('white_ips', function (err, reply) {
+        local_client.srandmember('white_ips', function (err, reply) {
             if (err) {
                 console.error(new Date() + ' get ip error: ' + err);
                 callback(false);
@@ -83,7 +87,7 @@ var getRandWhiteIp = exports.getRandWhiteIp = function (pass, callback) {
 };
 
 var genIps = function () {
-    client.scard('white_ips', function (err, reply) {
+    local_client.scard('white_ips', function (err, reply) {
         console.info('num of white_ips:' + reply);
         if (!reply || reply < 1045) {
             // fetch new ips
@@ -105,7 +109,7 @@ exports.addIps = function (ips, callback) {
         ips[index] = JSON.stringify(value);
     });
     // add ips
-    client.sadd(['ips'].concat(ips), function (err, reply) {
+    common_client.sadd(['ips'].concat(ips), function (err, reply) {
         callback(err, reply);
     });
 };
@@ -113,7 +117,7 @@ exports.addIps = function (ips, callback) {
 exports.addBlackIp = function (ip, callback) {
     if (!util.isString(ip))
         ip = JSON.stringify(ip);
-    client.sadd('black_ips', ip, function (err, reply) {
+    local_client.sadd('black_ips', ip, function (err, reply) {
         callback(err, reply);
     });
 };
