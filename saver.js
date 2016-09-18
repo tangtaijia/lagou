@@ -25,24 +25,25 @@ var self = module.exports = function (data, type, callback) {
 var insertDocument = function (db, data, type, pcallback, callback) {
     if(!db) {
         if (++retry_count > 15) {
-            assert.notEqual(undefined, db);
+            util.debuglog(db, 'db undefined');
         } else {
-            util.log('insert Document error: db undefined, key:' + data.key);
+            util.log('insert Document error: db undefined, companyId:' + data.companyId);
             sleep(1000);
             pcallback();
         }
     }
+    data.update_time = new Date();
     // upsert要配合下unique index: db.collection.ensureIndex( { "keyname": 1 }, { unique: true } )
     db.collection(type).updateOne(
-        type == 'company' ? {"key": data.key} : {"positionId": data.positionId},
-        {$set:data,$currentDate: {"update_time": true}},
-        { upsert: true},
+        type == 'company' ? {"companyId": data.companyId} : {"positionId": data.positionId},
+        data,
+        {upsert: true, w: 1},
         function (err, result) {
             if (err) {
                 if (++retry_count > 15) {
-                    assert.equal(null, err);
+                    util.debuglog(err, 'insert error');
                 } else {
-                    util.log('insert Document error: ' + err + ', key:' + data.key);
+                    util.log('insert Document error: ' + err + ', companyId:' + data.companyId);
                     sleep(1000);
                     pcallback();
                 }

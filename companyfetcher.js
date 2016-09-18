@@ -12,11 +12,11 @@ var yargs = require('yargs').argv;
 var local = yargs.l || false;
 var try_count = 0;
 
-var self = module.exports = function (key, with_job, callback) {
+var self = module.exports = function (companyId, with_job, callback) {
     proxyhandler.getRandWhiteIp(local, function (proxyip) {
         var proxy_url = proxyip ? ('http://' + proxyip.ip + ':' + proxyip.port) : 'localhost';
         var options = {
-            url: util.format('http://www.lagou.com/gongsi/%s.html', key),
+            url: util.format('http://www.lagou.com/gongsi/%s.html', companyId),
             headers: {
                 'User-Agent': config.ualist[Math.floor(Math.random() * (config.ualist.length - 1)) + 1]
             },
@@ -30,23 +30,23 @@ var self = module.exports = function (key, with_job, callback) {
         request(options, function (error, response, html) {
             if (!error) {
                 var $ = cheerio.load(html);
-                fetchCompany($, key, with_job, function (result) {
+                fetchCompany($, companyId, with_job, function (result) {
                     if (callback)
                         callback(result);
                 });
             } else {
                 if (response && response.statusCode && response.statusCode == 400) {
                     if (callback)
-                        callback(key + ' not found!!');
+                        callback(companyId + ' not found!!');
                 } else {
                     ++try_count;
                     if (try_count > 3) {
-                        console.error(new Date() + ' fetch company error:' + error + ', key:' + key);
+                        console.error(new Date() + ' fetch company error:' + error + ', companyId:' + companyId);
                         proxyhandler.addBlackIp(proxyip, function (err, reply) {
-                            callback(key + ' not found!!');
+                            callback(companyId + ' not found!!');
                         });
                     } else if (callback)
-                        self(key, with_job, callback);
+                        self(companyId, with_job, callback);
                 }
             }
         });
@@ -54,38 +54,38 @@ var self = module.exports = function (key, with_job, callback) {
 };
 
 
-function fetchCompany($, key, with_job, callback) {
+function fetchCompany($, companyId, with_job, callback) {
     var title_ele = $('.hovertips');
     if (title_ele.attr('title')) {
         var company = {};
         company.name = title_ele.attr('title');
         company.nick_name = title_ele.text().trim();
         parseCompany($, function (company) {
-            company.key = key;
+            company.companyId = companyId;
             if (with_job && parseInt(company.online_job_num)) {
                 company.online_job_num = parseInt(company.online_job_num);
-                jobfetcher(key, 1, function (jobs) {
+                jobfetcher(companyId, 1, function (jobs) {
                     var job_num = jobs.length;
                     storeJobs(jobs, function (jobs_result) {
                         if (jobs_result)
-                            util.log('company: ' + company.name + ' key: ' + key + jobs_result + ' ' + job_num + ' jobs successfully!!!');
+                            util.log('company: ' + company.name + ' companyId: ' + companyId + ', ' + jobs_result + ' ' + job_num + ' jobs successfully!!!');
                     });
                     storeCompany(company, function (result) {
                         if (result)
-                            callback(result + ' company: ' + company.name + ' key: ' + key + ' and ' + job_num + ' jobs successfully!!!');
+                            callback(result + ' company: ' + company.name + ' companyId: ' + companyId + ' and ' + job_num + ' jobs successfully!!!');
                     });
                 });
             } else {
                 storeCompany(company, function (result) {
                     if (result)
-                        callback(result + ' company: ' + company.name + ' key: ' + key + ' successfully!!!');
+                        callback(result + ' company: ' + company.name + ' companyId: ' + companyId + ' successfully!!!');
                 });
             }
 
 
         });
     } else {
-        callback(key + ' not found!!');
+        callback(companyId + ' not found!!');
     }
 }
 

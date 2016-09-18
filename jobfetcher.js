@@ -11,7 +11,7 @@ var local = yargs.l || false;
 var pageSize = 10;
 var jobs = [];
 var try_count = 0;
-var self = module.exports = function (key, pageNo, callback) {
+var self = module.exports = function (companyId, pageNo, callback) {
     proxyhandler.getRandWhiteIp(local, function (proxyip) {
         proxy_url = proxyip ? ('http://' + proxyip.ip + ':' + proxyip.port) : 'localhost';
         var options = {
@@ -22,7 +22,7 @@ var self = module.exports = function (key, pageNo, callback) {
             maxRedirects: 10,
             timeout: config.timeout,
             form: {
-                companyId: key,
+                companyId: companyId,
                 pageNo: pageNo,
                 pageSize: pageSize,
                 positionFirstType: "全部"
@@ -41,17 +41,17 @@ var self = module.exports = function (key, pageNo, callback) {
                             callback(jobs);
                         });
                     } else {
-                        self(key, options.form.pageNo, callback);
+                        self(companyId, options.form.pageNo, callback);
                         sleep(8000);
                     }
                 } else {
                     var result = JSON.parse(html);
                     pageCount = parseInt(result.content.data.page.totalCount / pageSize) + (result.content.data.page.totalCount % pageSize ? 1 : 0);
-                    util.log('fetch jobs json with proxy: ' + proxy_url + ', page:' + options.form.pageNo + '/' + pageCount + ', key:' + key);
+                    util.log('fetch jobs json with proxy: ' + proxy_url + ', page:' + options.form.pageNo + '/' + pageCount + ', companyId:' + companyId);
                     jobs = jobs.concat(result.content.data.page.result);
                     ++options.form.pageNo;
                     if (options.form.pageNo < pageCount) {
-                        self(key, options.form.pageNo, callback);
+                        self(companyId, options.form.pageNo, callback);
                         sleep(8000);
                     } else
                         callback(jobs);
