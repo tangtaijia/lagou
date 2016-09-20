@@ -110,7 +110,7 @@ function runTasks(start) {
                 var delay = parseInt((Math.random() * 10000000) % 2000, 10);
                 if (companyId % 100 == 0)
                     delay = 15;
-                sleep(delay * sleep_secs);
+                sleep(parseInt(delay) * parseInt(sleep_secs));
             }
         });
     }, function (err, result) {
